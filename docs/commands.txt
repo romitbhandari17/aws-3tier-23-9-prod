@@ -1,0 +1,4 @@
+cd src/infra
+terraform init
+terraform plan -var-file=src/infra/terraform.tfvars
+terraform apply -var-file=src/infra/terraform.tfvars

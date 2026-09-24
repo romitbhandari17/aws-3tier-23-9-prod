@@ -1,0 +1,49 @@
+# --- Terraform ---
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!envs/**/*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# .terraform.lock.hcl is intentionally NOT ignored — commit it to pin
+# provider versions consistently across machines/CI.
+
+# --- IDE / editors ---
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs / temp ---
+*.log
+tmp/
+*.tmp
+
+# --- Python (src/ecs/app) ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Node (if any tooling) ---
+node_modules/
+
+# --- Secrets / env files ---
+.env
+.env.*
+*.pem
+*.key
