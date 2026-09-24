@@ -34,6 +34,26 @@ data "aws_subnet" "candidates" {
   id       = each.value
 }
 
+# Customer-managed key for RDS storage encryption at rest, instead of the
+# AWS-managed "aws/rds" key — gives this project control over the key
+# policy, rotation, and (if ever needed) revocation, independent of the
+# default account-wide RDS key.
+resource "aws_kms_key" "rds" {
+  description             = "Customer-managed key for ${var.project_name}-${var.environment} RDS storage encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+resource "aws_kms_alias" "rds" {
+  name          = "alias/${var.project_name}-${var.environment}-rds"
+  target_key_id = aws_kms_key.rds.key_id
+}
+
 locals {
   # Subnets whose AZ is confirmed orderable for this instance class.
   rds_subnet_ids = [
@@ -87,7 +107,9 @@ resource "aws_db_instance" "this" {
   vpc_security_group_ids = [aws_security_group.this.id]
 
   publicly_accessible     = false
-  multi_az                = false
+  multi_az                = var.multi_az
+  storage_encrypted       = true
+  kms_key_id              = aws_kms_key.rds.arn
   skip_final_snapshot     = true
   apply_immediately       = true
   backup_retention_period = 0

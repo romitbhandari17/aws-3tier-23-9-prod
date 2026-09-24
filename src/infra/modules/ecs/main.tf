@@ -93,12 +93,14 @@ resource "aws_ecs_service" "app" {
   name            = "${var.project_name}-${var.environment}-app"
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  # Initial task count only — once created, Application Auto Scaling (below)
+  # owns desired_count going forward; see the lifecycle block.
+  desired_count = var.min_capacity
+  launch_type   = "FARGATE"
 
   network_configuration {
-    subnets          = var.subnet_ids
-    security_groups  = [var.ecs_security_group_id]
+    subnets         = var.subnet_ids
+    security_groups = [var.ecs_security_group_id]
     # No public IP and no internet route: the task reaches ECR, CloudWatch
     # Logs, and Secrets Manager only through the VPC endpoints created in
     # the vpc module.
@@ -109,5 +111,64 @@ resource "aws_ecs_service" "app" {
     target_group_arn = var.target_group_arn
     container_name   = "app"
     container_port   = var.container_port
+  }
+
+  # Without this, every `terraform apply` would reset desired_count back to
+  # var.min_capacity, fighting (and undoing) whatever count Application Auto
+  # Scaling had scaled the service to in response to real load.
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+# Registers the ECS service as a scalable target for Application Auto
+# Scaling. min_capacity=2 (by default) instead of 1: keeps at least 2 tasks
+# running at all times so a rolling deployment (old task draining + new task
+# starting) and a single-AZ failure both still leave at least 1 healthy task
+# serving traffic — a single-task service has a brief/total outage window in
+# both of those cases.
+resource "aws_appautoscaling_target" "ecs" {
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.app.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  min_capacity       = var.min_capacity
+  max_capacity       = var.max_capacity
+}
+
+# Target-tracking policy on CPU: scales out when average task CPU exceeds
+# cpu_target_value, scales back in (never below min_capacity) when it drops
+# well under it. Target tracking manages its own CloudWatch alarms, so no
+# separate aws_cloudwatch_metric_alarm resources are needed here.
+resource "aws_appautoscaling_policy" "cpu" {
+  name               = "${var.project_name}-${var.environment}-ecs-cpu-tracking"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value = var.cpu_target_value
+  }
+}
+
+# Target-tracking policy on memory, running alongside the CPU policy above —
+# ECS/Application Auto Scaling supports multiple target-tracking policies on
+# the same scalable target simultaneously; it scales out if either metric's
+# target is breached.
+resource "aws_appautoscaling_policy" "memory" {
+  name               = "${var.project_name}-${var.environment}-ecs-memory-tracking"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
+    }
+    target_value = var.memory_target_value
   }
 }

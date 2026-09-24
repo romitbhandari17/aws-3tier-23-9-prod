@@ -29,3 +29,8 @@ output "monitoring_role_arn" {
   description = "ARN of the RDS Enhanced Monitoring IAM role, if enabled (empty string otherwise)."
   value       = var.monitoring_interval > 0 ? aws_iam_role.rds_monitoring_role[0].arn : ""
 }
+
+output "kms_key_arn" {
+  description = "ARN of the customer-managed KMS key used to encrypt RDS storage at rest."
+  value       = aws_kms_key.rds.arn
+}

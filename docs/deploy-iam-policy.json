@@ -171,6 +171,22 @@
         "route53:*"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "kmsForRDS",
+      "Effect": "Allow",
+      "Action": [
+        "kms:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "autoscaling",
+      "Effect": "Allow",
+      "Action": [
+        "application-autoscaling:*"
+      ],
+      "Resource": "*"
     }
   ]
 }

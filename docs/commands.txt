@@ -2,3 +2,11 @@ cd src/infra
 terraform init
 terraform plan -var-file=src/infra/terraform.tfvars
 terraform apply -var-file=src/infra/terraform.tfvars
+
+For updating deploy role perms:
+export AWS_PROFILE=demo219
+bash scripts/update_deploy_role_perms.sh
+
+for deploying new ecs image and tfe apply:
+export AWS_PROFILE=demo219
+bash scripts/deploy-ecs.sh

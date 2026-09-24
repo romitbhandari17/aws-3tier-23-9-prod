@@ -60,6 +60,30 @@ variable "memory" {
   default     = "512"
 }
 
+variable "min_capacity" {
+  description = "Minimum number of ECS tasks the Application Auto Scaling target will ever scale the service down to. Kept at 2+ so a rolling deploy or a single AZ failure never drops the service to zero healthy tasks."
+  type        = number
+  default     = 2
+}
+
+variable "max_capacity" {
+  description = "Maximum number of ECS tasks Application Auto Scaling can scale the service up to."
+  type        = number
+  default     = 4
+}
+
+variable "cpu_target_value" {
+  description = "Target average CPU utilization (%) for the ECS service's CPU target-tracking auto scaling policy."
+  type        = number
+  default     = 70
+}
+
+variable "memory_target_value" {
+  description = "Target average memory utilization (%) for the ECS service's memory target-tracking auto scaling policy."
+  type        = number
+  default     = 75
+}
+
 variable "project_name" {
   description = "Short project name used for resource naming."
   type        = string

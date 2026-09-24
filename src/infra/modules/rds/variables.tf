@@ -61,3 +61,9 @@ variable "monitoring_interval" {
   type        = number
   default     = 0
 }
+
+variable "multi_az" {
+  description = "Enable Multi-AZ deployment (synchronous standby replica in a second AZ, automatic failover on primary failure). Recommended true outside of throwaway/demo environments; costs roughly 2x the single-AZ instance price."
+  type        = bool
+  default     = true
+}
